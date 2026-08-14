@@ -7,15 +7,45 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem('plantCareUser');
+    delete axios.defaults.headers.common['Authorization'];
+  };
+
   useEffect(() => {
     const storedUser = localStorage.getItem('plantCareUser');
     if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      setUser(parsedUser);
-      // Set default auth header
-      axios.defaults.headers.common['Authorization'] = `Bearer ${parsedUser.token}`;
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        const payload = JSON.parse(atob(parsedUser.token.split('.')[1]));
+        
+        if (payload.exp * 1000 < Date.now()) {
+          logout();
+        } else {
+          setUser(parsedUser);
+          axios.defaults.headers.common['Authorization'] = `Bearer ${parsedUser.token}`;
+        }
+      } catch (e) {
+        logout();
+      }
     }
     setLoading(false);
+
+    // Setup global response interceptor for 401 Unauthorized errors
+    const interceptor = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response && error.response.status === 401) {
+          logout();
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      axios.interceptors.response.eject(interceptor);
+    };
   }, []);
 
   const login = async (email, password) => {
@@ -32,12 +62,6 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('plantCareUser', JSON.stringify(data));
     axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
     return data;
-  };
-
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('plantCareUser');
-    delete axios.defaults.headers.common['Authorization'];
   };
 
   return (

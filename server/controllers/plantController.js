@@ -1,17 +1,18 @@
 const Plant = require('../models/Plant');
+const asyncHandler = require('../middleware/asyncHandler');
 
 // @desc    Get all plants for logged in user
 // @route   GET /api/plants
 // @access  Private
-const getPlants = async (req, res) => {
+const getPlants = asyncHandler(async (req, res) => {
   const plants = await Plant.find({ user: req.user.id }).sort({ createdAt: -1 });
   res.status(200).json(plants);
-};
+});
 
 // @desc    Get single plant
 // @route   GET /api/plants/:id
 // @access  Private
-const getPlant = async (req, res) => {
+const getPlant = asyncHandler(async (req, res) => {
   const plant = await Plant.findById(req.params.id);
 
   if (!plant) {
@@ -25,12 +26,12 @@ const getPlant = async (req, res) => {
   }
 
   res.status(200).json(plant);
-};
+});
 
 // @desc    Add a new plant
 // @route   POST /api/plants
 // @access  Private
-const addPlant = async (req, res) => {
+const addPlant = asyncHandler(async (req, res) => {
   const { plantName, species, wateringFrequency, sunlightRequirement, notes } = req.body;
 
   if (!plantName || !species || !wateringFrequency) {
@@ -49,12 +50,12 @@ const addPlant = async (req, res) => {
   });
 
   res.status(201).json(plant);
-};
+});
 
 // @desc    Update a plant
 // @route   PUT /api/plants/:id
 // @access  Private
-const updatePlant = async (req, res) => {
+const updatePlant = asyncHandler(async (req, res) => {
   const plant = await Plant.findById(req.params.id);
 
   if (!plant) {
@@ -78,12 +79,12 @@ const updatePlant = async (req, res) => {
   });
 
   res.status(200).json(updatedPlant);
-};
+});
 
 // @desc    Delete a plant
 // @route   DELETE /api/plants/:id
 // @access  Private
-const deletePlant = async (req, res) => {
+const deletePlant = asyncHandler(async (req, res) => {
   const plant = await Plant.findById(req.params.id);
 
   if (!plant) {
@@ -99,18 +100,18 @@ const deletePlant = async (req, res) => {
   await plant.deleteOne();
 
   res.status(200).json({ id: req.params.id });
-};
+});
 
 // @desc    Get plant statistics
 // @route   GET /api/plants/stats
 // @access  Private
-const getPlantStats = async (req, res) => {
+const getPlantStats = asyncHandler(async (req, res) => {
   const total = await Plant.countDocuments({ user: req.user.id });
   const healthy = await Plant.countDocuments({ user: req.user.id, healthStatus: 'Healthy' });
   const sick = await Plant.countDocuments({ user: req.user.id, healthStatus: { $ne: 'Healthy' } });
 
   res.status(200).json({ total, healthy, sick });
-};
+});
 
 module.exports = {
   getPlants,

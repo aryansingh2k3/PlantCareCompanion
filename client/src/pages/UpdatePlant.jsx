@@ -33,7 +33,7 @@ const UpdatePlant = () => {
           notes: data.notes || ''
         });
         if (data.image) {
-          setPreview(data.image.startsWith('http') ? data.image : data.image.startsWith('/') ? data.image : `/uploads/${data.image}`);
+          setPreview(data.image.startsWith('http') ? data.image : data.image.startsWith('/') ? `${window.API_URL || ''}${data.image}` : `${window.API_URL || ''}/uploads/${data.image}`);
         }
         setLoading(false);
       } catch (err) {

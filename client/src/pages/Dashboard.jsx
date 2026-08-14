@@ -24,7 +24,7 @@ const PlantCard = ({ plant, onRefresh }) => {
     >
       <div className="relative h-48 sm:h-56">
         <img 
-          src={plant.image.startsWith('http') ? plant.image : plant.image.startsWith('/') ? plant.image : `/uploads/${plant.image}`} 
+          src={plant.image.startsWith('http') ? plant.image : plant.image.startsWith('/') ? `${window.API_URL || ''}${plant.image}` : `${window.API_URL || ''}/uploads/${plant.image}`} 
           alt={plant.plantName}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
         />
