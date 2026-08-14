@@ -21,7 +21,7 @@ const AIAnalysis = () => {
   };
 
   const analyzeLeaf = async () => {
-    if (!image) return;
+    if (!image || loading) return;
     setLoading(true);
     setError('');
 
@@ -142,7 +142,53 @@ const AIAnalysis = () => {
               </motion.div>
             )}
 
-            {result && (
+            {result && result.plantDetected === false && (
+              <motion.div 
+                key="no-plant"
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                className="space-y-6"
+              >
+                <div className="card p-8 border-l-8 border-l-red-500 bg-white">
+                  <div className="flex items-center gap-3 text-red-500 mb-4">
+                    <AlertCircle size={32} />
+                    <h2 className="text-2xl font-black tracking-tight">No Plant Detected</h2>
+                  </div>
+                  <p className="text-gray-600 text-sm leading-relaxed mb-4">
+                    {result.reason || 'Please upload a clear image of a plant or plant leaf.'}
+                  </p>
+                </div>
+
+                <div className="flex gap-4">
+                  <button onClick={() => {setResult(null); setPreview(null); setImage(null)}} className="btn btn-outline flex-1 py-4">New Scan</button>
+                </div>
+              </motion.div>
+            )}
+
+            {result && result.plantDetected === true && (result.healthStatus === 'Unclear' || result.plantName === 'Unclear') && (
+              <motion.div 
+                key="unclear-plant"
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                className="space-y-6"
+              >
+                <div className="card p-8 border-l-8 border-l-yellow-500 bg-white">
+                  <div className="flex items-center gap-3 text-yellow-500 mb-4">
+                    <Info size={32} />
+                    <h2 className="text-2xl font-black tracking-tight">Unable to Determine</h2>
+                  </div>
+                  <p className="text-gray-600 text-sm leading-relaxed mb-4">
+                    {result.reason || 'We could not confidently identify the plant or its health status. Please ensure the photo is well-lit, in focus, and showing the affected leaves clearly.'}
+                  </p>
+                </div>
+
+                <div className="flex gap-4">
+                  <button onClick={() => {setResult(null); setPreview(null); setImage(null)}} className="btn btn-outline flex-1 py-4">New Scan</button>
+                </div>
+              </motion.div>
+            )}
+
+            {result && result.plantDetected === true && result.healthStatus !== 'Unclear' && result.plantName !== 'Unclear' && (
               <motion.div 
                 key="result"
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -154,38 +200,43 @@ const AIAnalysis = () => {
                     <div>
                       <span className="bg-primary-50 text-primary-600 text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md mb-2 block w-fit">Diagnosis Report</span>
                       <h2 className="text-3xl font-black text-gray-900 tracking-tight">{result.plantName}</h2>
+                      {result.scientificName && (
+                        <p className="text-sm text-gray-500 italic mt-0.5">{result.scientificName}</p>
+                      )}
                     </div>
                     <div className="text-right">
                       <div className="text-xs font-bold text-gray-400 mb-1">CONFIDENCE</div>
                       <div className="text-2xl font-black text-primary-600">
-                        {result.confidenceScore < 1 ? (result.confidenceScore * 100).toFixed(0) : result.confidenceScore}%
+                        {result.confidence}%
                       </div>
                     </div>
                   </div>
 
                   <div className="mb-8">
                     <div className="flex items-center gap-2 text-red-500 mb-2">
-                      {result.disease === 'Healthy' ? <CheckCircle2 className="text-green-500" /> : <AlertCircle />}
-                      <span className={clsx("text-xl font-bold", result.disease === 'Healthy' ? "text-green-600" : "text-red-600")}>
-                        {result.disease}
+                      {result.healthStatus === 'Healthy' ? <CheckCircle2 className="text-green-500" /> : <AlertCircle />}
+                      <span className={clsx("text-xl font-bold", result.healthStatus === 'Healthy' ? "text-green-600" : "text-red-600")}>
+                        {result.healthStatus === 'Healthy' ? 'Healthy' : (result.problem || result.healthStatus)}
                       </span>
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <h4 className="font-bold text-gray-900 flex items-center gap-2 border-b pb-2">
-                       <CheckCircle2 size={18} className="text-primary-500" />
-                       Treatment Suggestions
-                    </h4>
-                    <ul className="space-y-3">
-                      {result.suggestions.map((s, i) => (
-                        <li key={i} className="flex gap-3 text-gray-600 text-sm leading-relaxed">
-                          <span className="w-5 h-5 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">{i+1}</span>
-                          {s}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                  {result.recommendations && result.recommendations.length > 0 && (
+                    <div className="space-y-4">
+                      <h4 className="font-bold text-gray-900 flex items-center gap-2 border-b pb-2">
+                         <CheckCircle2 size={18} className="text-primary-500" />
+                         Treatment Suggestions
+                      </h4>
+                      <ul className="space-y-3">
+                        {result.recommendations.map((s, i) => (
+                          <li key={i} className="flex gap-3 text-gray-600 text-sm leading-relaxed">
+                            <span className="w-5 h-5 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">{i+1}</span>
+                            {s}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex gap-4">

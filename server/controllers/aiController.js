@@ -62,11 +62,53 @@ const analyzePlant = async (req, res) => {
 
     console.log("--- Initializing Gemini AI Scan ---");
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-3-flash-preview",
+      systemInstruction: "You are a professional botanist and plant pathologist. Your task is to analyze the uploaded image to identify the plant and diagnose its health status. Be highly accurate, objective, and deterministic. Do not guess, do not force a plant identification, and do not invent diseases. If the image does not contain a plant or plant leaf, or is too unclear/low-quality to determine, indicate this strictly according to the requested JSON response format.",
+      generationConfig: {
+        responseMimeType: "application/json",
+        temperature: 0
+      }
+    });
 
     const imageData = fs.readFileSync(req.file.path).toString('base64');
     
-    const prompt = "Identify this plant and its health status strictly in JSON format: {plantName, disease, suggestions, confidenceScore}. Return ONLY the JSON object, do not wrap in markdown or backticks.";
+    const prompt = `Analyze this image and return a JSON object with the following fields:
+{
+  "plantDetected": boolean,
+  "plantName": string | null,
+  "scientificName": string | null,
+  "healthStatus": "Healthy" | "Sick" | "Unclear" | null,
+  "confidence": number (0 to 100),
+  "problem": string | null,
+  "recommendations": string[],
+  "reason": string | null
+}
+
+Guidelines:
+1. If the image does not contain a plant or plant leaf:
+   - Set "plantDetected" to false.
+   - Set "plantName", "scientificName", "healthStatus", "problem" to null.
+   - Set "confidence" to 0.
+   - Set "recommendations" to [].
+   - Set "reason" to a description of what was detected instead, asking the user to upload a clear plant photo.
+2. If the image is unclear, blurry, or of low quality, and you cannot confidently determine the plant or its visible condition:
+   - Set "plantDetected" to true or false depending on if a plant is visually visible.
+   - Set "plantName" to "Unclear".
+   - Set "scientificName" to null.
+   - Set "healthStatus" to "Unclear".
+   - Set "problem" to null.
+   - Set "confidence" to a low number (e.g. 0 to 10).
+   - Set "recommendations" to [].
+   - Set "reason" to an explanation of why you cannot identify it, asking the user to upload a clearer, well-lit image.
+3. If a plant/leaf is successfully detected and can be identified:
+   - Set "plantDetected" to true.
+   - Identify the common "plantName" and the "scientificName".
+   - Set "healthStatus" to "Healthy" or "Sick".
+   - If "healthStatus" is "Sick", identify the specific disease/pest/watering issue in "problem", and provide actionable organic or professional remedies in "recommendations".
+   - If "healthStatus" is "Healthy", set "problem" to null, and provide general plant care guidelines in "recommendations".
+   - Set "confidence" as an integer percentage from 0 to 100 reflecting your certainty.
+   - Set "reason" to null.`;
     
     const result = await model.generateContent([
       prompt,
@@ -81,13 +123,14 @@ const analyzePlant = async (req, res) => {
     const responseText = result.response.text();
     console.log("Gemini API Raw Response:", responseText);
 
-    // Parse JSON safely from markdown code blocks if any
-    const cleanText = responseText.replace(/```json|```/g, '').trim();
-    const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
-    const analysis = JSON.parse(jsonMatch ? jsonMatch[0] : cleanText);
+    const analysis = JSON.parse(responseText);
 
     // Validate that the returned object contains the required fields
-    if (!analysis.plantName || !analysis.disease || !Array.isArray(analysis.suggestions)) {
+    if (
+      typeof analysis.plantDetected !== 'boolean' ||
+      (analysis.plantDetected && !analysis.plantName) ||
+      !Array.isArray(analysis.recommendations)
+    ) {
       throw new Error("Invalid response schema from Gemini API.");
     }
 
@@ -101,17 +144,12 @@ const analyzePlant = async (req, res) => {
     console.error('Please verify that GEMINI_API_KEY in server/.env is valid and active.');
     console.error('Google AI Studio: https://aistudio.google.com/');
     console.error('--------------------------------------------------');
-    console.error('Executing local fallback diagnosis to ensure scanner uptime.');
-
-    // Fallback gracefully to a mock result so the user's UI doesn't crash
-    const originalName = req.file ? req.file.originalname : '';
-    const fallbackData = getMockDiagnosis(originalName);
 
     if (req.file && fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
     }
 
-    res.status(200).json(fallbackData);
+    res.status(500).json({ message: error.message || 'Error communicating with AI Doctor' });
   }
 };
 
