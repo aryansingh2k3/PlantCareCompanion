@@ -8,6 +8,7 @@ ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointE
 
 const Analytics = () => {
   const [stats, setStats] = useState({ total: 0, healthy: 0, sick: 0 });
+  const [timeframe, setTimeframe] = useState('month');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -37,11 +38,15 @@ const Analytics = () => {
   };
 
   const activityData = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+    labels: timeframe === 'month'
+      ? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+      : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
     datasets: [
       {
         label: 'Watering Completion %',
-        data: [65, 78, 90, 85, 95, 92],
+        data: timeframe === 'month'
+          ? [65, 78, 90, 85, 95, 92]
+          : [70, 85, 60, 90, 80, 95, 88],
         borderColor: '#059669',
         backgroundColor: 'rgba(5, 150, 105, 0.1)',
         tension: 0.4,
@@ -81,8 +86,26 @@ const Analytics = () => {
           <div className="flex justify-between items-center mb-8 border-b pb-4">
             <h3 className="text-xl font-bold text-gray-900">Care Consistency</h3>
             <div className="flex gap-2 text-xs font-bold bg-gray-50 p-1.5 rounded-lg text-gray-400 uppercase">
-              <span className="bg-white px-2 py-1 rounded shadow-sm text-primary-600">By Month</span>
-              <span className="px-2 py-1">By Week</span>
+              <button
+                onClick={() => setTimeframe('month')}
+                className={`px-2.5 py-1 rounded transition-all duration-200 focus:outline-none cursor-pointer ${
+                  timeframe === 'month'
+                    ? 'bg-white shadow-sm text-primary-600'
+                    : 'hover:text-gray-600 text-gray-400'
+                }`}
+              >
+                By Month
+              </button>
+              <button
+                onClick={() => setTimeframe('week')}
+                className={`px-2.5 py-1 rounded transition-all duration-200 focus:outline-none cursor-pointer ${
+                  timeframe === 'week'
+                    ? 'bg-white shadow-sm text-primary-600'
+                    : 'hover:text-gray-600 text-gray-400'
+                }`}
+              >
+                By Week
+              </button>
             </div>
           </div>
           <div className="h-[300px]">
